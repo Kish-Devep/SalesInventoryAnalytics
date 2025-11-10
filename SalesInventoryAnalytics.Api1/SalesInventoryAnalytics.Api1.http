@@ -1,6 +1,0 @@
-@SalesInventoryAnalytics.Api1_HostAddress = http://localhost:5090
-
-GET {{SalesInventoryAnalytics.Api1_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
