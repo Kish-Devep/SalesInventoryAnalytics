@@ -1,0 +1,74 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36127.28
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesInventoryAnalytics.Domain", "SalesInventoryAnalytics.Domain\SalesInventoryAnalytics.Domain.csproj", "{7192A422-A9C2-43AD-8230-07A662890623}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesInventoryAnalytics.Application", "SalesInventoryAnalytics.Application\SalesInventoryAnalytics.Application.csproj", "{E7B9561E-635C-4796-BC73-1F649AA08B61}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesInventoryAnalytics.Persistence", "SalesInventoryAnalytics.Persistence\SalesInventoryAnalytics.Persistence.csproj", "{333E7D48-D1F2-4615-94AA-18C80A9C5CDE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesInventoryAnalytics.Infrastructure", "SalesInventoryAnalytics.Infrastructure\SalesInventoryAnalytics.Infrastructure.csproj", "{CCF5238A-F927-47BB-A179-3C4F9FA9F46A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesInventoryAnalytics.EtlWorker", "SalesInventoryAnalytics.EtlWorker\SalesInventoryAnalytics.EtlWorker.csproj", "{F6FE4101-EE31-49E8-BDD9-0FC8173E7861}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesInventoryAnalytics.Api", "SalesInventoryAnalytics.Api\SalesInventoryAnalytics.Api.csproj", "{6A5B085A-46B8-4340-81D2-03EBFE8EF5CE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{A0839864-34EB-4330-8847-7A5943B5B61C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{DFA27121-D2E2-42A8-B2EA-0D35711E0282}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presentation", "Presentation", "{F9DE36F5-92C4-48A0-8FE1-D97E06D55555}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7192A422-A9C2-43AD-8230-07A662890623}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7192A422-A9C2-43AD-8230-07A662890623}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7192A422-A9C2-43AD-8230-07A662890623}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7192A422-A9C2-43AD-8230-07A662890623}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7B9561E-635C-4796-BC73-1F649AA08B61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7B9561E-635C-4796-BC73-1F649AA08B61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7B9561E-635C-4796-BC73-1F649AA08B61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7B9561E-635C-4796-BC73-1F649AA08B61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{333E7D48-D1F2-4615-94AA-18C80A9C5CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{333E7D48-D1F2-4615-94AA-18C80A9C5CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{333E7D48-D1F2-4615-94AA-18C80A9C5CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{333E7D48-D1F2-4615-94AA-18C80A9C5CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCF5238A-F927-47BB-A179-3C4F9FA9F46A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCF5238A-F927-47BB-A179-3C4F9FA9F46A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCF5238A-F927-47BB-A179-3C4F9FA9F46A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCF5238A-F927-47BB-A179-3C4F9FA9F46A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6FE4101-EE31-49E8-BDD9-0FC8173E7861}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6FE4101-EE31-49E8-BDD9-0FC8173E7861}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6FE4101-EE31-49E8-BDD9-0FC8173E7861}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6FE4101-EE31-49E8-BDD9-0FC8173E7861}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A5B085A-46B8-4340-81D2-03EBFE8EF5CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A5B085A-46B8-4340-81D2-03EBFE8EF5CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A5B085A-46B8-4340-81D2-03EBFE8EF5CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A5B085A-46B8-4340-81D2-03EBFE8EF5CE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7192A422-A9C2-43AD-8230-07A662890623} = {A0839864-34EB-4330-8847-7A5943B5B61C}
+		{E7B9561E-635C-4796-BC73-1F649AA08B61} = {A0839864-34EB-4330-8847-7A5943B5B61C}
+		{333E7D48-D1F2-4615-94AA-18C80A9C5CDE} = {DFA27121-D2E2-42A8-B2EA-0D35711E0282}
+		{CCF5238A-F927-47BB-A179-3C4F9FA9F46A} = {DFA27121-D2E2-42A8-B2EA-0D35711E0282}
+		{F6FE4101-EE31-49E8-BDD9-0FC8173E7861} = {F9DE36F5-92C4-48A0-8FE1-D97E06D55555}
+		{6A5B085A-46B8-4340-81D2-03EBFE8EF5CE} = {F9DE36F5-92C4-48A0-8FE1-D97E06D55555}
+		{A0839864-34EB-4330-8847-7A5943B5B61C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{DFA27121-D2E2-42A8-B2EA-0D35711E0282} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{F9DE36F5-92C4-48A0-8FE1-D97E06D55555} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {48EC304D-7F7C-4831-B5D4-9BE62F09B2BC}
+	EndGlobalSection
+EndGlobal
