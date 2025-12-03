@@ -71,13 +71,15 @@ namespace SalesInventoryAnalytics.Persistence.Repositories
         public async Task BulkInsertVentasAsync(IEnumerable<FactVentas> ventas)
         {
             var ventasList = ventas.ToList();
+            const int batchSize = 6000;
 
-            await _context.BulkInsertAsync(ventasList, options =>
+            // Insertar en lotes para mejor rendimiento
+            for (int i = 0; i < ventasList.Count; i += batchSize)
             {
-                options.BatchSize = 5000; // Config de lotes
-                options.InsertIfNotExists = false; // Verif duplicados
-                options.AutoMapOutputDirection = false; // Mapear valores de retorno
-            });
+                var batch = ventasList.Skip(i).Take(batchSize).ToList();
+                _context.AddRange(batch);
+                await _context.SaveChangesAsync();
+            }
         }
 
         // Carga masiva de mis tables de dimensiones.

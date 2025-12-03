@@ -84,20 +84,23 @@ namespace SalesInventoryAnalytics.EtlWorker.Workers
                 // Extraer Customers
                 var customersCsv = await customerExtractor.ExtractAsync(Path.Combine(csvBasePath, "customers.csv"));
                 var stagingCustomers = await customerTransformer.TransformAsync(customersCsv, "CSV");
-                await stagingContext.BulkInsertAsync(stagingCustomers.Where(x => x.EsValido).ToList());
+                stagingContext.AddRange(stagingCustomers.Where(x => x.EsValido).ToList());
+                await stagingContext.SaveChangesAsync();
                 _logger.LogInformation("Clientes cargados en Staging: {Count}", stagingCustomers.Count(x => x.EsValido));
 
                 // Extraer Products
                 var productsCsv = await productExtractor.ExtractAsync(Path.Combine(csvBasePath, "products.csv"));
                 var stagingProducts = await productTransformer.TransformAsync(productsCsv, "CSV");
-                await stagingContext.BulkInsertAsync(stagingProducts.Where(x => x.EsValido).ToList());
+                stagingContext.AddRange(stagingProducts.Where(x => x.EsValido).ToList());
+                await stagingContext.SaveChangesAsync();
                 _logger.LogInformation("Productos cargados en Staging: {Count}", stagingProducts.Count(x => x.EsValido));
 
                 // Extraer Orders + OrderDetails
                 var ordersCsv = await orderExtractor.ExtractAsync(Path.Combine(csvBasePath, "orders.csv"));
                 var orderDetailsCsv = await orderDetailExtractor.ExtractAsync(Path.Combine(csvBasePath, "order_details.csv"));
                 var stagingSales = await saleTransformer.TransformAsync(ordersCsv, orderDetailsCsv, "CSV");
-                await stagingContext.BulkInsertAsync(stagingSales.Where(x => x.EsValido).ToList());
+                stagingContext.AddRange(stagingSales.Where(x => x.EsValido).ToList());
+                await stagingContext.SaveChangesAsync();
                 _logger.LogInformation("Ventas cargadas en Staging: {Count}", stagingSales.Count(x => x.EsValido));
             }
             catch (Exception ex)
