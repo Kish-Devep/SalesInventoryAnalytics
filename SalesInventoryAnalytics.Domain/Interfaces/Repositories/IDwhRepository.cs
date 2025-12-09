@@ -31,5 +31,7 @@ namespace SalesInventoryAnalytics.Domain.Interfaces.Repositories
 
         // Ventas  con el Bulk Insert
         Task BulkInsertVentasAsync(IEnumerable<FactVentas> ventas);
+
+
     }
 }

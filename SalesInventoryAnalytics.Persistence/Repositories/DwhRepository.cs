@@ -1,19 +1,29 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Data.SqlClient;
 using SalesInventoryAnalytics.Domain.Entities.Dwh.Dimensions;
 using SalesInventoryAnalytics.Domain.Entities.Dwh.Facts;
 using SalesInventoryAnalytics.Domain.Interfaces.Repositories;
 using SalesInventoryAnalytics.Persistence.Context;
-using Z.EntityFramework.Extensions;
+using System.Data;
 
 namespace SalesInventoryAnalytics.Persistence.Repositories
 {
     public class DwhRepository : IDwhRepository
     {
         private readonly DwhContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<DwhRepository> _logger;
 
-        public DwhRepository(DwhContext context)
+        public DwhRepository(
+            DwhContext context,
+            IConfiguration configuration,
+            ILogger<DwhRepository> logger)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         // Clientes
@@ -40,7 +50,7 @@ namespace SalesInventoryAnalytics.Persistence.Repositories
             return await _context.SaveChangesAsync();
         }
 
-        // Preductos
+        // Productos
         public async Task<DimProducto?> GetActiveProductoByCodigoAsync(string codigoProducto)
         {
             return await _context.DimProductos
@@ -59,7 +69,7 @@ namespace SalesInventoryAnalytics.Persistence.Repositories
             await Task.CompletedTask;
         }
 
-        // pa las fechas
+        // Fechas
         public async Task<DimFecha?> GetFechaByIdAsync(int fechaId)
         {
             return await _context.DimFechas
@@ -67,22 +77,95 @@ namespace SalesInventoryAnalytics.Persistence.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        // Ventas
         public async Task BulkInsertVentasAsync(IEnumerable<FactVentas> ventas)
         {
             var ventasList = ventas.ToList();
-            const int batchSize = 6000;
 
-            // Insertar en lotes para mejor rendimiento
-            for (int i = 0; i < ventasList.Count; i += batchSize)
+            if (!ventasList.Any())
             {
-                var batch = ventasList.Skip(i).Take(batchSize).ToList();
-                _context.AddRange(batch);
-                await _context.SaveChangesAsync();
+                _logger.LogWarning("No hay ventas para insertar");
+                return;
+            }
+
+            var connectionString = _configuration.GetConnectionString("DwhConnection");
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                var dataTable = new DataTable();
+
+                // Crear columnas (sin VentaId porque es IDENTITY)
+                dataTable.Columns.Add("ClienteId", typeof(int));
+                dataTable.Columns.Add("ProductoId", typeof(int));
+                dataTable.Columns.Add("FechaId", typeof(int));
+                dataTable.Columns.Add("Cantidad", typeof(int));
+                dataTable.Columns.Add("PrecioUnitario", typeof(decimal));
+                dataTable.Columns.Add("TotalVenta", typeof(decimal));
+                dataTable.Columns.Add("NumeroOrden", typeof(string));
+                dataTable.Columns.Add("Estado", typeof(string));
+                dataTable.Columns.Add("OrigenDatos", typeof(string));
+                dataTable.Columns.Add("FechaCreacion", typeof(DateTime));
+
+                // Llenar filas
+                foreach (var venta in ventasList)
+                {
+                    dataTable.Rows.Add(
+                        venta.ClienteId,
+                        venta.ProductoId,
+                        venta.FechaId,
+                        venta.Cantidad,
+                        venta.PrecioUnitario,
+                        venta.TotalVenta,
+                        venta.NumeroOrden,
+                        venta.Estado,
+                        venta.OrigenDatos,
+                        venta.FechaCreacion
+                    );
+                }
+
+                using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
+                {
+                    DestinationTableName = "Fact_Ventas",
+                    BatchSize = 10000,
+                    BulkCopyTimeout = 600
+                };
+
+                // Mapear columnas
+                bulkCopy.ColumnMappings.Add("ClienteId", "ClienteId");
+                bulkCopy.ColumnMappings.Add("ProductoId", "ProductoId");
+                bulkCopy.ColumnMappings.Add("FechaId", "FechaId");
+                bulkCopy.ColumnMappings.Add("Cantidad", "Cantidad");
+                bulkCopy.ColumnMappings.Add("PrecioUnitario", "PrecioUnitario");
+                bulkCopy.ColumnMappings.Add("TotalVenta", "TotalVenta");
+                bulkCopy.ColumnMappings.Add("NumeroOrden", "NumeroOrden");
+                bulkCopy.ColumnMappings.Add("Estado", "Estado");
+                bulkCopy.ColumnMappings.Add("OrigenDatos", "OrigenDatos");
+                bulkCopy.ColumnMappings.Add("FechaCreacion", "FechaCreacion");
+
+                await bulkCopy.WriteToServerAsync(dataTable);
+                await transaction.CommitAsync();
+
+                stopwatch.Stop();
+                _logger.LogInformation(
+                    " BulkInsert: {Count:N0} ventas en {Seconds:N2}s ({Rate:N0} reg/seg)",
+                    ventasList.Count,
+                    stopwatch.Elapsed.TotalSeconds,
+                    ventasList.Count / stopwatch.Elapsed.TotalSeconds);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, " Error en BulkInsert de ventas");
+                throw;
             }
         }
 
-        // Carga masiva de mis tables de dimensiones.
+        // Carga masiva de dimensiones
         public async Task<Dictionary<string, DimCliente>> GetAllActiveClientesAsync()
         {
             return await _context.DimClientes

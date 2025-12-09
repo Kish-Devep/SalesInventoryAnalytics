@@ -6,7 +6,6 @@ using SalesInventoryAnalytics.Domain.Interfaces.Repositories;
 
 namespace SalesInventoryAnalytics.Application.Services.ETL
 {
-    // Servicio para cargar datos desde Staging al Data Warehouse.
     public class DwhLoaderService
     {
         private readonly IStagingRepository _stagingRepo;
@@ -23,10 +22,10 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // Cargar clientes desde Staging a Dim_Cliente con SCD Type 2.
         public async Task<int> LoadDimClienteAsync()
         {
-            _logger.LogInformation("* Cargando Dim_Cliente (SCD Type 2)...");
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            _logger.LogInformation(" * Cargando Dim_Cliente (SCD Type 2)...");
 
             var stagingClientes = await _stagingRepo.GetUnprocessedCustomersAsync();
 
@@ -36,15 +35,19 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                 return 0;
             }
 
+            var clientesExistentes = await _dwhRepo.GetAllActiveClientesAsync();
+            _logger.LogInformation("  * {Count} clientes activos cargados en memoria", clientesExistentes.Count);
+
             int insertados = 0;
             int actualizados = 0;
+            var clientesAActualizar = new List<DimCliente>();
+            var clientesAInsertar = new List<DimCliente>();
 
             foreach (var staging in stagingClientes)
             {
-                var clienteExistente = await _dwhRepo.GetActiveClienteByCodigoAsync(staging.CodigoCliente);
-
-                if (clienteExistente == null)
+                if (!clientesExistentes.TryGetValue(staging.CodigoCliente, out var clienteExistente))
                 {
+                    // Cliente nuevo
                     var nuevoCliente = new DimCliente
                     {
                         CodigoCliente = staging.CodigoCliente,
@@ -60,11 +63,12 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                         FechaFinValidez = null
                     };
 
-                    await _dwhRepo.AddClienteAsync(nuevoCliente);
+                    clientesAInsertar.Add(nuevoCliente);
                     insertados++;
                 }
                 else
                 {
+                    // Cliente existente - verificar cambios
                     bool cambio = clienteExistente.Nombre != staging.Nombre ||
                                   clienteExistente.Apellido != staging.Apellido ||
                                   clienteExistente.Email != staging.Email ||
@@ -74,11 +78,13 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
 
                     if (cambio)
                     {
+                        // Marcar versión anterior como inactiva
                         clienteExistente.EsActivo = false;
                         clienteExistente.FechaFinValidez = DateTime.Now;
                         clienteExistente.FechaActualizacion = DateTime.Now;
-                        await _dwhRepo.UpdateClienteAsync(clienteExistente);
+                        clientesAActualizar.Add(clienteExistente);
 
+                        // Crear nueva versión
                         var nuevaVersion = new DimCliente
                         {
                             CodigoCliente = staging.CodigoCliente,
@@ -94,24 +100,45 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                             FechaFinValidez = null
                         };
 
-                        await _dwhRepo.AddClienteAsync(nuevaVersion);
+                        clientesAInsertar.Add(nuevaVersion);
                         actualizados++;
                     }
                 }
             }
 
-            await _dwhRepo.SaveChangesAsync();
+            if (clientesAActualizar.Any())
+            {
+                foreach (var cliente in clientesAActualizar)
+                {
+                    await _dwhRepo.UpdateClienteAsync(cliente);
+                }
+            }
+
+            if (clientesAInsertar.Any())
+            {
+                foreach (var cliente in clientesAInsertar)
+                {
+                    await _dwhRepo.AddClienteAsync(cliente);
+                }
+            }
+
+            if (clientesAActualizar.Any() || clientesAInsertar.Any())
+            {
+                await _dwhRepo.SaveChangesAsync();
+            }
+
             await _stagingRepo.MarkCustomersAsProcessedAsync(stagingClientes);
 
-            _logger.LogInformation("  * Dim_Cliente: {Insertados} insertados, {Actualizados} actualizados",
-                insertados, actualizados);
+            sw.Stop();
+            _logger.LogInformation(" Dim_Cliente: {Insertados} insertados, {Actualizados} actualizados en {Time}ms",
+                insertados, actualizados, sw.ElapsedMilliseconds);
 
             return insertados + actualizados;
         }
 
-        // Cargar productos desde Staging a Dim_Producto con SCD Type 2.
         public async Task<int> LoadDimProductoAsync()
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             _logger.LogInformation("* Cargando Dim_Producto (SCD Type 2)...");
 
             var stagingProductos = await _stagingRepo.GetUnprocessedProductsAsync();
@@ -122,15 +149,19 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                 return 0;
             }
 
+            var productosExistentes = await _dwhRepo.GetAllActiveProductosAsync();
+            _logger.LogInformation("  * {Count} productos activos cargados en memoria", productosExistentes.Count);
+
             int insertados = 0;
             int actualizados = 0;
+            var productosAActualizar = new List<DimProducto>();
+            var productosAInsertar = new List<DimProducto>();
 
             foreach (var staging in stagingProductos)
             {
-                var productoExistente = await _dwhRepo.GetActiveProductoByCodigoAsync(staging.CodigoProducto);
-
-                if (productoExistente == null)
+                if (!productosExistentes.TryGetValue(staging.CodigoProducto, out var productoExistente))
                 {
+                    // Producto nuevo
                     var nuevoProducto = new DimProducto
                     {
                         CodigoProducto = staging.CodigoProducto,
@@ -144,11 +175,12 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                         FechaFinValidez = null
                     };
 
-                    await _dwhRepo.AddProductoAsync(nuevoProducto);
+                    productosAInsertar.Add(nuevoProducto);
                     insertados++;
                 }
                 else
                 {
+                    // Producto existente - verificar cambios
                     bool cambio = productoExistente.NombreProducto != staging.NombreProducto ||
                                   productoExistente.Categoria != staging.Categoria ||
                                   productoExistente.PrecioUnitario != staging.PrecioUnitario ||
@@ -156,11 +188,13 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
 
                     if (cambio)
                     {
+                        // Marcar versión anterior como inactiva
                         productoExistente.EsActivo = false;
                         productoExistente.FechaFinValidez = DateTime.Now;
                         productoExistente.FechaActualizacion = DateTime.Now;
-                        await _dwhRepo.UpdateProductoAsync(productoExistente);
+                        productosAActualizar.Add(productoExistente);
 
+                        // Crear nueva versión
                         var nuevaVersion = new DimProducto
                         {
                             CodigoProducto = staging.CodigoProducto,
@@ -174,24 +208,45 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                             FechaFinValidez = null
                         };
 
-                        await _dwhRepo.AddProductoAsync(nuevaVersion);
+                        productosAInsertar.Add(nuevaVersion);
                         actualizados++;
                     }
                 }
             }
 
-            await _dwhRepo.SaveChangesAsync();
+            if (productosAActualizar.Any())
+            {
+                foreach (var producto in productosAActualizar)
+                {
+                    await _dwhRepo.UpdateProductoAsync(producto);
+                }
+            }
+
+            if (productosAInsertar.Any())
+            {
+                foreach (var producto in productosAInsertar)
+                {
+                    await _dwhRepo.AddProductoAsync(producto);
+                }
+            }
+
+            if (productosAActualizar.Any() || productosAInsertar.Any())
+            {
+                await _dwhRepo.SaveChangesAsync();
+            }
+
             await _stagingRepo.MarkProductsAsProcessedAsync(stagingProductos);
 
-            _logger.LogInformation("  * Dim_Producto: {Insertados} insertados, {Actualizados} actualizados",
-                insertados, actualizados);
+            sw.Stop();
+            _logger.LogInformation("   Dim_Producto: {Insertados} insertados, {Actualizados} actualizados en {Time}ms",
+                insertados, actualizados, sw.ElapsedMilliseconds);
 
             return insertados + actualizados;
         }
 
-        // Carga ventas desde Staging a  mi tabla Fact_Ventas
         public async Task<int> LoadFactVentasAsync()
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             _logger.LogInformation("→ Cargando Fact_Ventas...");
 
             var stagingVentas = await _stagingRepo.GetUnprocessedSalesAsync();
@@ -221,7 +276,6 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                 {
                     if (!clientesDict.TryGetValue(staging.CodigoCliente, out var cliente))
                     {
-                        _logger.LogWarning("  * Cliente no encontrado: {Codigo}", staging.CodigoCliente);
                         staging.ErrorValidacion = $"Cliente {staging.CodigoCliente} no existe";
                         staging.EsValido = false;
                         ventasInvalidas.Add(staging);
@@ -231,7 +285,6 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
 
                     if (!productosDict.TryGetValue(staging.CodigoProducto, out var producto))
                     {
-                        _logger.LogWarning("  * Producto no encontrado: {Codigo}", staging.CodigoProducto);
                         staging.ErrorValidacion = $"Producto {staging.CodigoProducto} no existe";
                         staging.EsValido = false;
                         ventasInvalidas.Add(staging);
@@ -252,7 +305,6 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
 
                     if (!fechasDict.TryGetValue(fechaId, out var fecha))
                     {
-                        _logger.LogWarning("  * Fecha no encontrada: {FechaId}", fechaId);
                         staging.ErrorValidacion = $"Fecha {fechaId} no existe";
                         staging.EsValido = false;
                         ventasInvalidas.Add(staging);
@@ -270,7 +322,8 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                         TotalVenta = staging.TotalVenta ?? 0,
                         NumeroOrden = staging.NumeroOrden,
                         Estado = staging.Estado,
-                        OrigenDatos = staging.OrigenDatos
+                        OrigenDatos = staging.OrigenDatos,
+                        FechaCreacion = DateTime.Now
                     };
 
                     factVentas.Add(factVenta);
@@ -290,8 +343,6 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
                 _logger.LogInformation("  * Ejecutando BulkInsert de {Count} ventas...", factVentas.Count);
 
                 await _dwhRepo.BulkInsertVentasAsync(factVentas);
-
-                _logger.LogInformation("  * Fact_Ventas: {Count} ventas cargadas", factVentas.Count);
             }
 
             await _stagingRepo.MarkSalesAsProcessedAsync(stagingVentas.Where(x => !ventasInvalidas.Contains(x)));
@@ -305,6 +356,9 @@ namespace SalesInventoryAnalytics.Application.Services.ETL
             {
                 _logger.LogWarning("  * {Errores} ventas con errores (no se cargaron)", errores);
             }
+
+            sw.Stop();
+            _logger.LogInformation("   Fact_Ventas: {Count} ventas cargadas en {Time}ms", factVentas.Count, sw.ElapsedMilliseconds);
 
             return factVentas.Count;
         }
